@@ -4,9 +4,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-@Builder(builderMethodName = "hiddenBuilder")
-@Getter
-@Setter
 /**
  * Configuration for {@link CsvReader} and {@link CsvWriter}.
  * @author bissbert
@@ -15,6 +12,9 @@ import lombok.Setter;
  * @see CsvReader
  * @see CsvWriter
  */
+@Builder(builderMethodName = "hiddenBuilder")
+@Getter
+@Setter
 public class CsvConfig<T> {
     @Builder.Default
     private String separator = ";";
