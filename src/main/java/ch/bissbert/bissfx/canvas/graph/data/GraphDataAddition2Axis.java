@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Builder()
+@Builder
 public class GraphDataAddition2Axis extends GraphDataAddition {
     @Builder.Default
     private String xLegend = "";

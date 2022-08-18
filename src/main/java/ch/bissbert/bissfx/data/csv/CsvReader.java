@@ -12,6 +12,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Reads a single line of csv and maps it to an object.
@@ -31,19 +32,19 @@ public final class CsvReader<T> implements ObjectReader<T> {
         //register all mappers from ObjectMappers.class
         registerMapper(String.class, ObjectMappers.Providers.STRING);
         registerMapper(Integer.class, ObjectMappers.Providers.INTEGER);
-        registerMapper(Integer.TYPE, ObjectMappers.Providers.INTEGER);
+        registerMapper(int.class, ObjectMappers.Providers.INTEGER);
         registerMapper(Double.class, ObjectMappers.Providers.DOUBLE);
-        registerMapper(Double.TYPE, ObjectMappers.Providers.DOUBLE);
+        registerMapper(double.class, ObjectMappers.Providers.DOUBLE);
         registerMapper(Boolean.class, ObjectMappers.Providers.BOOLEAN);
-        registerMapper(Boolean.TYPE, ObjectMappers.Providers.BOOLEAN);
+        registerMapper(boolean.class, ObjectMappers.Providers.BOOLEAN);
         registerMapper(Long.class, ObjectMappers.Providers.LONG);
-        registerMapper(Long.TYPE, ObjectMappers.Providers.LONG);
+        registerMapper(long.class, ObjectMappers.Providers.LONG);
         registerMapper(Float.class, ObjectMappers.Providers.FLOAT);
-        registerMapper(Float.TYPE, ObjectMappers.Providers.FLOAT);
+        registerMapper(float.class, ObjectMappers.Providers.FLOAT);
         registerMapper(Short.class, ObjectMappers.Providers.SHORT);
-        registerMapper(Short.TYPE, ObjectMappers.Providers.SHORT);
+        registerMapper(short.class, ObjectMappers.Providers.SHORT);
         registerMapper(Byte.class, ObjectMappers.Providers.BYTE);
-        registerMapper(Byte.TYPE, ObjectMappers.Providers.BYTE);
+        registerMapper(byte.class, ObjectMappers.Providers.BYTE);
         registerMapper(LocalDate.class, ObjectMappers.Providers.LOCAL_DATE);
         registerMapper(LocalDateTime.class, ObjectMappers.Providers.LOCAL_DATE_TIME);
     }
@@ -99,7 +100,7 @@ public final class CsvReader<T> implements ObjectReader<T> {
      */
     public List<T> readAll(String value) {
         List<T> result = new ArrayList<>();
-        for (String line : value.split(config.getEscape())) {
+        for (String line : value.split(Pattern.quote(config.getEscape()))) {
             result.add(read(line));
         }
         return result;
@@ -191,7 +192,7 @@ public final class CsvReader<T> implements ObjectReader<T> {
      * @return the values of the line
      */
     private String[] split(String value) {
-        return value.split(config.getSeparator());
+        return value.split(Pattern.quote(config.getSeparator()));
     }
 
     /**
@@ -210,7 +211,7 @@ public final class CsvReader<T> implements ObjectReader<T> {
     }
 
     private String removeEscape(String value) {
-        return reverse(reverse(value.replaceFirst(config.getEscape(), "")).replaceFirst(config.getEscape(), ""));
+        return reverse(reverse(value.replaceFirst(config.getQuote(), "")).replaceFirst(config.getQuote(), ""));
     }
 
     private String reverse(String value) {

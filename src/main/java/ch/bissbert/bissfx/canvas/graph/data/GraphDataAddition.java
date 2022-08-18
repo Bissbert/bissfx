@@ -6,6 +6,5 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Builder
 public abstract class GraphDataAddition {
 }

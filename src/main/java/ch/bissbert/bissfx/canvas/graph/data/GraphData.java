@@ -9,7 +9,7 @@ import lombok.Setter;
 @Builder(builderMethodName = "hiddenBuilder")
 @Getter
 @Setter
-public abstract class GraphData<T extends GraphDataAddition> {
+public class GraphData<T extends GraphDataAddition> {
     @Builder.Default
     private Font font = Font.getDefault();
     private double canvasBorder;
