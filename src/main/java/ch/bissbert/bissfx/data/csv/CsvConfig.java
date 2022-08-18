@@ -7,6 +7,14 @@ import lombok.Setter;
 @Builder(builderMethodName = "hiddenBuilder")
 @Getter
 @Setter
+/**
+ * Configuration for {@link CsvReader} and {@link CsvWriter}.
+ * @author bissbert
+ * @since 1.0.0
+ * @version 1.0.0
+ * @see CsvReader
+ * @see CsvWriter
+ */
 public class CsvConfig<T> {
     @Builder.Default
     private String separator = ";";
@@ -14,6 +22,8 @@ public class CsvConfig<T> {
     private String quote = "\"";
     @Builder.Default
     private String escape = "\n";
+    @Builder.Default
+    private boolean findByHeaders = false;
     private String[] headers;
     private Class<T> clazz;
 

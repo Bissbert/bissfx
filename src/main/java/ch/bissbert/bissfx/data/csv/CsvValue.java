@@ -9,7 +9,17 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
+/**
+ * Annotation for fields that should be mapped to a csv value.
+ * @author bissbert
+ * @since 1.0.0
+ * @version 1.0.0
+ * @see CsvReader
+ * @see CsvWriter
+ * @see CsvConfig
+ */
 public @interface CsvValue {
     String name() default "";
+
     int index() default -1;
 }

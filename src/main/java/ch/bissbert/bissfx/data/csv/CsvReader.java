@@ -9,7 +9,6 @@ import lombok.Getter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URLClassLoader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -24,7 +23,7 @@ import java.util.*;
  */
 @Getter
 @AllArgsConstructor
-public class CsvReader<T> implements ObjectReader<T> {
+public final class CsvReader<T> implements ObjectReader<T> {
 
     private static final Map<Class<?>, ObjectMapperProvider<?>> mappers = new HashMap<>();
 
@@ -92,14 +91,44 @@ public class CsvReader<T> implements ObjectReader<T> {
         return mapToObject(values);
     }
 
-    private T mapToObject(String[] values) {
-        final Field[] fieldsToMap = findFieldsToMap(config.getClazz());
-        if (config.getHeaders() == null) {
-            return mapToObjectByIndex(values, fieldsToMap);
+    /**
+     * maps a string to a list of objects by splitting lines at the configured separator
+     *
+     * @param value the string to split and map
+     * @return the list of mapped objects
+     */
+    public List<T> readAll(String value) {
+        List<T> result = new ArrayList<>();
+        for (String line : value.split(config.getEscape())) {
+            result.add(read(line));
         }
-        return mapToObjectByName(values, fieldsToMap);
+        return result;
     }
 
+    /**
+     * maps a string array to an object
+     *
+     * @param values the string array to map
+     * @return the mapped object
+     */
+    private T mapToObject(String[] values) {
+        final Field[] fieldsToMap = findFieldsToMap(config.getClazz());
+        if (config.isFindByHeaders()) {
+            if (config.getHeaders() == null) {
+                throw new IllegalStateException("Headers are not set but findByHeaders is true in config");
+            }
+            return mapToObjectByName(values, fieldsToMap);
+        }
+        return mapToObjectByIndex(values, fieldsToMap);
+    }
+
+    /**
+     * maps an array of values to their fields using the headers defined in the config and annotated with {@link CsvValue}
+     *
+     * @param values      the values to map
+     * @param fieldsToMap the fields to map to
+     * @return the mapped object
+     */
     private T mapToObjectByName(String[] values, final Field[] fieldsToMap) {
         try {
             T instance = config.getClazz().getDeclaredConstructor().newInstance();
@@ -116,6 +145,13 @@ public class CsvReader<T> implements ObjectReader<T> {
         }
     }
 
+    /**
+     * maps an array of values to their fields using the index defined in the annotation
+     *
+     * @param values      the values to map
+     * @param fieldsToMap the fields to map to
+     * @return the mapped object
+     */
     private T mapToObjectByIndex(String[] values, final Field[] fieldsToMap) {
         try {
             T instance = config.getClazz().getDeclaredConstructor().newInstance();
@@ -168,8 +204,16 @@ public class CsvReader<T> implements ObjectReader<T> {
      */
     private <M> M map(String value, Class<M> clazz) {
         if (clazz.equals(String.class)) {
-            value = value.replace(config.getQuote(), "");
+            value = removeEscape(value);
         }
         return getMapper(clazz).getData().map(value);
+    }
+
+    private String removeEscape(String value) {
+        return reverse(reverse(value.replaceFirst(config.getEscape(), "")).replaceFirst(config.getEscape(), ""));
+    }
+
+    private String reverse(String value) {
+        return new StringBuilder(value).reverse().toString();
     }
 }
