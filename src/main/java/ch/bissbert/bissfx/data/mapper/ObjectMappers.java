@@ -5,16 +5,16 @@ import java.time.LocalDateTime;
 import java.util.function.Function;
 
 public final class ObjectMappers {
-    public static final ObjectMapper<String> STRING = new LambdaMapper<>(s -> s);
-    public static final ObjectMapper<Integer> INTEGER = new LambdaMapper<>(Integer::parseInt);
-    public static final ObjectMapper<Double> DOUBLE = new LambdaMapper<>(Double::parseDouble);
-    public static final ObjectMapper<Boolean> BOOLEAN = new LambdaMapper<>(Boolean::parseBoolean);
-    public static final ObjectMapper<Long> LONG = new LambdaMapper<>(Long::parseLong);
-    public static final ObjectMapper<Float> FLOAT = new LambdaMapper<>(Float::parseFloat);
-    public static final ObjectMapper<Short> SHORT = new LambdaMapper<>(Short::parseShort);
-    public static final ObjectMapper<Byte> BYTE = new LambdaMapper<>(Byte::parseByte);
-    public static final ObjectMapper<LocalDate> LOCAL_DATE = new LambdaMapper<>(LocalDate::parse);
-    public static final ObjectMapper<LocalDateTime> LOCAL_DATE_TIME = new LambdaMapper<>(LocalDateTime::parse);
+    public static final ObjectMapper<String> STRING = s -> s;
+    public static final ObjectMapper<Integer> INTEGER = Integer::parseInt;
+    public static final ObjectMapper<Double> DOUBLE = Double::parseDouble;
+    public static final ObjectMapper<Boolean> BOOLEAN = Boolean::parseBoolean;
+    public static final ObjectMapper<Long> LONG = Long::parseLong;
+    public static final ObjectMapper<Float> FLOAT = Float::parseFloat;
+    public static final ObjectMapper<Short> SHORT = Short::parseShort;
+    public static final ObjectMapper<Byte> BYTE = Byte::parseByte;
+    public static final ObjectMapper<LocalDate> LOCAL_DATE = LocalDate::parse;
+    public static final ObjectMapper<LocalDateTime> LOCAL_DATE_TIME = LocalDateTime::parse;
 
     private ObjectMappers() {
     }
