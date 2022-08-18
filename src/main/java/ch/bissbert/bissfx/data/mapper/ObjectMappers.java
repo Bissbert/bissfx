@@ -2,7 +2,6 @@ package ch.bissbert.bissfx.data.mapper;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.function.Function;
 
 public final class ObjectMappers {
     public static final ObjectMapper<String> STRING = s -> s;
