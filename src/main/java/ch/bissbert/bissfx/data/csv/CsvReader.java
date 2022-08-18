@@ -1,0 +1,175 @@
+package ch.bissbert.bissfx.data.csv;
+
+import ch.bissbert.bissfx.data.ObjectReader;
+import ch.bissbert.bissfx.data.mapper.ObjectMapper;
+import ch.bissbert.bissfx.data.mapper.ObjectMapperProvider;
+import ch.bissbert.bissfx.data.mapper.ObjectMappers;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URLClassLoader;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+/**
+ * Reads a single line of csv and maps it to an object.
+ *
+ * @param <T> the type of the object to map to
+ * @author bissbert
+ * @version 1.0.0
+ * @since 1.0.0
+ */
+@Getter
+@AllArgsConstructor
+public class CsvReader<T> implements ObjectReader<T> {
+
+    private static final Map<Class<?>, ObjectMapperProvider<?>> mappers = new HashMap<>();
+
+    static {
+        //register all mappers from ObjectMappers.class
+        registerMapper(String.class, ObjectMappers.Providers.STRING);
+        registerMapper(Integer.class, ObjectMappers.Providers.INTEGER);
+        registerMapper(Integer.TYPE, ObjectMappers.Providers.INTEGER);
+        registerMapper(Double.class, ObjectMappers.Providers.DOUBLE);
+        registerMapper(Double.TYPE, ObjectMappers.Providers.DOUBLE);
+        registerMapper(Boolean.class, ObjectMappers.Providers.BOOLEAN);
+        registerMapper(Boolean.TYPE, ObjectMappers.Providers.BOOLEAN);
+        registerMapper(Long.class, ObjectMappers.Providers.LONG);
+        registerMapper(Long.TYPE, ObjectMappers.Providers.LONG);
+        registerMapper(Float.class, ObjectMappers.Providers.FLOAT);
+        registerMapper(Float.TYPE, ObjectMappers.Providers.FLOAT);
+        registerMapper(Short.class, ObjectMappers.Providers.SHORT);
+        registerMapper(Short.TYPE, ObjectMappers.Providers.SHORT);
+        registerMapper(Byte.class, ObjectMappers.Providers.BYTE);
+        registerMapper(Byte.TYPE, ObjectMappers.Providers.BYTE);
+        registerMapper(LocalDate.class, ObjectMappers.Providers.LOCAL_DATE);
+        registerMapper(LocalDateTime.class, ObjectMappers.Providers.LOCAL_DATE_TIME);
+    }
+
+    /**
+     * fetches the mapper for the given class
+     * <p>
+     * returns null if no mapper is available
+     * </br>
+     * mappers for classes other than primitives have to be registered manually using {@link #registerMapper(Class, ObjectMapperProvider)}
+     *
+     * @param clazz the class to get the mapper for
+     * @param <T>   the class to get the mapper for
+     * @return the mapper for the given class
+     */
+    public static <T> ObjectMapperProvider<ObjectMapper<T>> getMapper(Class<T> clazz) {
+        return (ObjectMapperProvider<ObjectMapper<T>>) mappers.get(clazz);
+    }
+
+    /**
+     * registers a mapper for a class
+     * <p>
+     * mappers for classes other than primitives have to be registered manually using this method.<br/>
+     * if a mapper for the given class is already registered, it will be overwritten
+     *
+     * @param clazz  the class to register the mapper for
+     * @param mapper the mapper to register
+     * @param <T>    the class to register the mapper for
+     */
+    public static <T> void registerMapper(Class<T> clazz, ObjectMapperProvider<ObjectMapper<T>> mapper) {
+        mappers.put(clazz, mapper);
+    }
+
+    private CsvConfig<T> config;
+
+    /**
+     * reads a single line of csv and maps it to an object
+     *
+     * @param value the line to map
+     * @return the mapped object
+     */
+    @Override
+    public T read(String value) {
+        String[] values = split(value);
+        return mapToObject(values);
+    }
+
+    private T mapToObject(String[] values) {
+        final Field[] fieldsToMap = findFieldsToMap(config.getClazz());
+        if (config.getHeaders() == null) {
+            return mapToObjectByIndex(values, fieldsToMap);
+        }
+        return mapToObjectByName(values, fieldsToMap);
+    }
+
+    private T mapToObjectByName(String[] values, final Field[] fieldsToMap) {
+        try {
+            T instance = config.getClazz().getDeclaredConstructor().newInstance();
+            List<String> headerList = Arrays.asList(config.getHeaders());
+            for (final Field field : fieldsToMap) {
+                final String value = values[headerList.indexOf(field.getAnnotation(CsvValue.class).name())];
+                field.setAccessible(true);
+                field.set(instance, map(value, field.getType()));
+            }
+            return instance;
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                 NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private T mapToObjectByIndex(String[] values, final Field[] fieldsToMap) {
+        try {
+            T instance = config.getClazz().getDeclaredConstructor().newInstance();
+            for (final Field field : fieldsToMap) {
+                final String value = values[field.getAnnotation(CsvValue.class).index()];
+                field.setAccessible(true);
+                field.set(instance, map(value, field.getType()));
+            }
+            return instance;
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                 NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * finds all fields that are configured to be mapped from csv
+     *
+     * @param clazz the class to find the fields for
+     * @return the fields that are configured to be mapped from csv
+     */
+    private Field[] findFieldsToMap(Class<T> clazz) {
+        Field[] fields = clazz.getDeclaredFields();
+        ArrayList<Field> fieldsToMap = new ArrayList<>();
+        for (Field field : fields) {
+            if (field.isAnnotationPresent(CsvValue.class)) {
+                fieldsToMap.add(field);
+            }
+        }
+        return fieldsToMap.toArray(new Field[0]);
+    }
+
+    /**
+     * splits a csv line into its values using the configured separator
+     *
+     * @param value the line to split
+     * @return the values of the line
+     */
+    private String[] split(String value) {
+        return value.split(config.getSeparator());
+    }
+
+    /**
+     * maps a single value to an object using the configured mapper
+     *
+     * @param value the value to map
+     * @param clazz the class to map to
+     * @param <M>   the class to map to
+     * @return the mapped object
+     */
+    private <M> M map(String value, Class<M> clazz) {
+        if (clazz.equals(String.class)) {
+            value = value.replace(config.getQuote(), "");
+        }
+        return getMapper(clazz).getData().map(value);
+    }
+}
