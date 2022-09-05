@@ -8,6 +8,12 @@ import org.hibernate.cfg.Configuration;
 import java.util.List;
 import java.util.spi.CalendarDataProvider;
 
+/**
+ * A class to access the database.
+ *
+ * @param <T> the type of the objects to access
+ * @author Bissbert
+ */
 public class Dao<T> implements AutoCloseable {
     private final Session session;
     private final SessionFactory sessionFactory;

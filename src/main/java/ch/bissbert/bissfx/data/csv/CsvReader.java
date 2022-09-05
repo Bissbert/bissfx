@@ -1,16 +1,11 @@
 package ch.bissbert.bissfx.data.csv;
 
 import ch.bissbert.bissfx.data.ObjectReader;
-import ch.bissbert.bissfx.data.mapper.ObjectMapper;
-import ch.bissbert.bissfx.data.mapper.ObjectMapperProvider;
-import ch.bissbert.bissfx.data.mapper.ObjectMappers;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -24,61 +19,9 @@ import java.util.regex.Pattern;
  */
 @Getter
 @AllArgsConstructor
-public final class CsvReader<T> implements ObjectReader<T> {
+public final class CsvReader<T> extends CsvMapper implements ObjectReader<T>, CsvConfigurable<T>{
 
-    private static final Map<Class<?>, ObjectMapperProvider<?>> mappers = new HashMap<>();
-
-    static {
-        //register all mappers from ObjectMappers.class
-        registerMapper(String.class, ObjectMappers.Providers.STRING);
-        registerMapper(Integer.class, ObjectMappers.Providers.INTEGER);
-        registerMapper(int.class, ObjectMappers.Providers.INTEGER);
-        registerMapper(Double.class, ObjectMappers.Providers.DOUBLE);
-        registerMapper(double.class, ObjectMappers.Providers.DOUBLE);
-        registerMapper(Boolean.class, ObjectMappers.Providers.BOOLEAN);
-        registerMapper(boolean.class, ObjectMappers.Providers.BOOLEAN);
-        registerMapper(Long.class, ObjectMappers.Providers.LONG);
-        registerMapper(long.class, ObjectMappers.Providers.LONG);
-        registerMapper(Float.class, ObjectMappers.Providers.FLOAT);
-        registerMapper(float.class, ObjectMappers.Providers.FLOAT);
-        registerMapper(Short.class, ObjectMappers.Providers.SHORT);
-        registerMapper(short.class, ObjectMappers.Providers.SHORT);
-        registerMapper(Byte.class, ObjectMappers.Providers.BYTE);
-        registerMapper(byte.class, ObjectMappers.Providers.BYTE);
-        registerMapper(LocalDate.class, ObjectMappers.Providers.LOCAL_DATE);
-        registerMapper(LocalDateTime.class, ObjectMappers.Providers.LOCAL_DATE_TIME);
-    }
-
-    /**
-     * fetches the mapper for the given class
-     * <p>
-     * returns null if no mapper is available
-     * </br>
-     * mappers for classes other than primitives have to be registered manually using {@link #registerMapper(Class, ObjectMapperProvider)}
-     *
-     * @param clazz the class to get the mapper for
-     * @param <T>   the class to get the mapper for
-     * @return the mapper for the given class
-     */
-    public static <T> ObjectMapperProvider<ObjectMapper<T>> getMapper(Class<T> clazz) {
-        return (ObjectMapperProvider<ObjectMapper<T>>) mappers.get(clazz);
-    }
-
-    /**
-     * registers a mapper for a class
-     * <p>
-     * mappers for classes other than primitives have to be registered manually using this method.<br/>
-     * if a mapper for the given class is already registered, it will be overwritten
-     *
-     * @param clazz  the class to register the mapper for
-     * @param mapper the mapper to register
-     * @param <T>    the class to register the mapper for
-     */
-    public static <T> void registerMapper(Class<T> clazz, ObjectMapperProvider<ObjectMapper<T>> mapper) {
-        mappers.put(clazz, mapper);
-    }
-
-    private CsvConfig<T> config;
+    private CsvConfig<T> csvConfig;
 
     /**
      * reads a single line of csv and maps it to an object
@@ -100,7 +43,7 @@ public final class CsvReader<T> implements ObjectReader<T> {
      */
     public List<T> readAll(String value) {
         List<T> result = new ArrayList<>();
-        for (String line : value.split(Pattern.quote(config.getEscape()))) {
+        for (String line : value.split(Pattern.quote(getCsvConfig().getEscape()))) {
             result.add(read(line));
         }
         return result;
@@ -113,9 +56,9 @@ public final class CsvReader<T> implements ObjectReader<T> {
      * @return the mapped object
      */
     private T mapToObject(String[] values) {
-        final Field[] fieldsToMap = findFieldsToMap(config.getClazz());
-        if (config.isFindByHeaders()) {
-            if (config.getHeaders() == null) {
+        final Field[] fieldsToMap = findFieldsToMap(getCsvConfig().getClazz());
+        if (getCsvConfig().isFindByHeaders()) {
+            if (getCsvConfig().getHeaders() == null) {
                 throw new IllegalStateException("Headers are not set but findByHeaders is true in config");
             }
             return mapToObjectByName(values, fieldsToMap);
@@ -132,8 +75,8 @@ public final class CsvReader<T> implements ObjectReader<T> {
      */
     private T mapToObjectByName(String[] values, final Field[] fieldsToMap) {
         try {
-            T instance = config.getClazz().getDeclaredConstructor().newInstance();
-            List<String> headerList = Arrays.asList(config.getHeaders());
+            T instance = getCsvConfig().getClazz().getDeclaredConstructor().newInstance();
+            List<String> headerList = Arrays.asList(getCsvConfig().getHeaders());
             for (final Field field : fieldsToMap) {
                 final String value = values[headerList.indexOf(field.getAnnotation(CsvValue.class).name())];
                 field.setAccessible(true);
@@ -155,7 +98,7 @@ public final class CsvReader<T> implements ObjectReader<T> {
      */
     private T mapToObjectByIndex(String[] values, final Field[] fieldsToMap) {
         try {
-            T instance = config.getClazz().getDeclaredConstructor().newInstance();
+            T instance = getCsvConfig().getClazz().getDeclaredConstructor().newInstance();
             for (final Field field : fieldsToMap) {
                 final String value = values[field.getAnnotation(CsvValue.class).index()];
                 field.setAccessible(true);
@@ -192,7 +135,7 @@ public final class CsvReader<T> implements ObjectReader<T> {
      * @return the values of the line
      */
     private String[] split(String value) {
-        return value.split(Pattern.quote(config.getSeparator()));
+        return value.split(Pattern.quote(getCsvConfig().getSeparator()));
     }
 
     /**
@@ -207,11 +150,11 @@ public final class CsvReader<T> implements ObjectReader<T> {
         if (clazz.equals(String.class)) {
             value = removeEscape(value);
         }
-        return getMapper(clazz).getData().map(value);
+        return getMapperProvider(clazz).getData().map(value);
     }
 
     private String removeEscape(String value) {
-        return reverse(reverse(value.replaceFirst(config.getQuote(), "")).replaceFirst(config.getQuote(), ""));
+        return reverse(reverse(value.replaceFirst(getCsvConfig().getQuote(), "")).replaceFirst(getCsvConfig().getQuote(), ""));
     }
 
     private String reverse(String value) {

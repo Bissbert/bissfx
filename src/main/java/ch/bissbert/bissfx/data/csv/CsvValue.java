@@ -19,7 +19,17 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 
 public @interface CsvValue {
+    /**
+     * The name of the csv value as in the header.
+     *
+     * @return the name of the csv value
+     */
     String name() default "";
 
+    /**
+     * The index of the value in the csv line.
+     *
+     * @return the index of the value in the csv line
+     */
     int index() default -1;
 }
